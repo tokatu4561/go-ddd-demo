@@ -30,6 +30,6 @@ func (user *User) Name() *UserName {
 	return &user.name
 }
 
-func (user *User) Equals(other *User) bool {
-	return reflect.DeepEqual(user.userId, other.userId)
+func (user *User) Equals(other *UserId) bool {
+	return reflect.DeepEqual(user.userId, other)
 }
