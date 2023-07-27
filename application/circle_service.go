@@ -12,13 +12,86 @@ import (
 type CircleApplicationService struct {
 	circleRepository circle.CircleRepositoryInterface
 	circleService    service.CircleService
+	userRepository  user.UserRepositoryInterface
 }
 
 func NewCircleApplicationService(circleRepository circle.CircleRepositoryInterface, circleService service.CircleService) (*CircleApplicationService, error) {
 	return &CircleApplicationService{circleRepository: circleRepository, circleService: circleService}, nil
 }
 
-func (cas *CircleApplicationService) Register(circleName string) (err error) {
+type CircleJoinCommand struct {
+	CircleId string
+	UserId   string
+}
+
+func (cas *CircleApplicationService) Join(command CircleJoinCommand) error {
+	memberId, err := user.NewUserId(command.UserId)
+	member, err := cas.userRepository.Find(memberId)
+	if err != nil {
+		return err
+	}
+	if member == nil {
+		return fmt.Errorf("user of %s is not found.", command.UserId)
+	}
+
+	circleId, err := circle.NewCircleId(command.CircleId)
+	circle, err := cas.circleRepository.Find(circleId)
+	if err != nil {
+		return err
+	}
+	if circle == nil {
+		return fmt.Errorf("circle of %s is not found.", command.CircleId)
+	}
+
+	if err := circle.Join(member); err != nil {
+		return err
+	}
+	if err := cas.circleRepository.Save(circle); err != nil {
+		return err
+	}
+
+	// transaction.Complete();
+	return nil
+}
+
+type CircleUpdateCommand struct {
+	Id   string
+	Name string
+}
+
+func (cas *CircleApplicationService) Update(command CircleUpdateCommand) (err error) {
+	circleId, err := circle.NewCircleId(command.Id)
+	if err != nil {
+		return err
+	}
+	targetCircle, err := cas.circleRepository.Find(circleId)
+	if err != nil {
+		return err
+	}
+	if targetCircle == nil {
+		return fmt.Errorf("circle of %s is not found.", command.Id)
+	}
+
+	if command.Name != "" {
+		circleName, err := circle.NewCircleName(command.Name)
+		if err != nil {
+			return err
+		}
+		_ = targetCircle.ChangeName(*circleName)
+		if isCircleExists, err := cas.circleService.Exists(targetCircle); err != nil {
+			return err
+		} else if isCircleExists {
+			return fmt.Errorf("circleName of %s is already exists.", command.Name)
+		}
+	}
+
+	if err := cas.circleRepository.Save(targetCircle); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (cas *CircleApplicationService) Create(circleName string) (err error) {
 	newCircleId, err := circle.NewCircleId("test-circle-id")
 	if err != nil {
 		return nil

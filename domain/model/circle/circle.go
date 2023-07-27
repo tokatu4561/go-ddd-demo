@@ -44,6 +44,10 @@ func (circle *Circle) Join(newMember *user.User) error {
 	return nil
 }
 
+func (circle *Circle) ChangeName(name CircleName) error {
+	circle.Name = name
+	return nil
+}
 
 func (circle *Circle) ChangeMemberName(memberId *user.UserId, changedUserName *user.UserName) error {
 	for i, member := range circle.Members {
