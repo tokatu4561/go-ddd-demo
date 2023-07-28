@@ -7,13 +7,15 @@ import (
 type User struct {
 	userId UserId
 	name   UserName
+	isPremium bool
 }
 
-func NewUser(userId UserId, name UserName) (*User, error) {
+func NewUser(userId UserId, name UserName, isPremium bool) (*User, error) {
 	user := new(User)
 
 	user.userId = userId
 	user.name = name
+	user.isPremium = isPremium
 	return user, nil
 }
 
@@ -32,4 +34,8 @@ func (user *User) Name() *UserName {
 
 func (user *User) Equals(other *UserId) bool {
 	return reflect.DeepEqual(user.userId, other)
+}
+
+func (user *User) IsPremium() bool {
+	return user.isPremium
 }

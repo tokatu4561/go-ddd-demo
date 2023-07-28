@@ -35,18 +35,28 @@ func (cas *CircleApplicationService) Join(command CircleJoinCommand) error {
 	}
 
 	circleId, err := circle.NewCircleId(command.CircleId)
-	circle, err := cas.circleRepository.Find(circleId)
+	findCircle, err := cas.circleRepository.Find(circleId)
 	if err != nil {
 		return err
 	}
-	if circle == nil {
+	if findCircle == nil {
 		return fmt.Errorf("circle of %s is not found.", command.CircleId)
 	}
 
-	if err := circle.Join(member); err != nil {
+	cicleFullSpecificationm, err:= circle.NewCircleFullSpecification(cas.userRepository)
+	if err != nil {
 		return err
 	}
-	if err := cas.circleRepository.Save(circle); err != nil {
+	if isSatisfied, err := cicleFullSpecificationm.IsSatisfiedBy(findCircle); err != nil {
+		return err
+	} else if isSatisfied {
+		return fmt.Errorf("circle of %s is full.", command.CircleId)
+	}
+
+	if err := findCircle.Join(member); err != nil {
+		return err
+	}
+	if err := cas.circleRepository.Save(findCircle); err != nil {
 		return err
 	}
 
