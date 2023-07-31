@@ -7,6 +7,7 @@ import (
 	"github.com/tokatu4561/go-ddd-demo/domain/model/circle"
 	"github.com/tokatu4561/go-ddd-demo/domain/model/user"
 	"github.com/tokatu4561/go-ddd-demo/domain/service"
+	"github.com/tokatu4561/go-ddd-demo/infrastructure/sql/services/circles"
 )
 
 type CircleApplicationService struct {
@@ -43,11 +44,11 @@ func (cas *CircleApplicationService) Join(command CircleJoinCommand) error {
 		return fmt.Errorf("circle of %s is not found.", command.CircleId)
 	}
 
-	cicleFullSpecificationm, err:= circle.NewCircleFullSpecification(cas.userRepository)
+	circleFullSpecification, err:= circle.NewCircleFullSpecification(cas.userRepository)
 	if err != nil {
 		return err
 	}
-	if isSatisfied, err := cicleFullSpecificationm.IsSatisfiedBy(findCircle); err != nil {
+	if isSatisfied, err := circleFullSpecification.IsSatisfiedBy(findCircle); err != nil {
 		return err
 	} else if isSatisfied {
 		return fmt.Errorf("circle of %s is full.", command.CircleId)
@@ -184,4 +185,17 @@ func (cas *CircleApplicationService) Get(circleName string) (_ *CircleData, err 
 		return nil, err
 	}
 	return &CircleData{Id: circle.Id, Name: circle.Name, Owner: circle.Owner, Members: circle.Members}, nil
+}
+
+
+// ページネーションなど複雑なクエリはクエリサービスを作成する
+// なぜならリポジトリを利用する場合は、全件取得してから指定件数絞り込みが必要になってしまうため　全件取得が無駄
+func (cas *CircleApplicationService) GetSummaries(command circles.CircleGetSummaryCommand) (_ []*circles.CircleSummaryData, err error) {
+	circleQueryService, err := circles.NewCircleQueryService()
+	if err != nil {	
+		return nil, err
+	}
+	circles, err := circleQueryService.GetSummaries(&command)
+
+	return circles, nil
 }
