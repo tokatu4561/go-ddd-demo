@@ -1,13 +1,18 @@
 package application
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/tokatu4561/go-ddd-demo/domain/model/user"
-	"github.com/tokatu4561/go-ddd-demo/domain/service"
+	"github.com/tokatu4561/go-ddd-demo/infrastructure/transaction"
 )
 
 type UserApplicationService struct {
 	userRepository user.UserRepositoryInterface
-	userService    service.CircleService
+	userService    user.UserService
+	userFactory   user.UserFactory
+	transaction   transaction.Transaction
 }
 
 type GetUserListCommand struct {
@@ -19,7 +24,7 @@ type UserData struct {
 	Name    user.UserName
 }
 
-func (uas *CircleApplicationService) GetUsers(command GetUserListCommand) (usersData []UserData, err error) {
+func (uas *UserApplicationService) GetUsers(command GetUserListCommand) (usersData []UserData, err error) {
 	userIds := make([]user.UserId, len(command.UserIds))
 	for i, userId := range command.UserIds {
 		dId, err := user.NewUserId(userId)
@@ -43,4 +48,40 @@ func (uas *CircleApplicationService) GetUsers(command GetUserListCommand) (users
 	}
 
 	return usersData, nil
+}
+
+type UserRegisterCommand struct {
+	Name string
+}
+
+// register user
+func (uas *UserApplicationService) Register(command UserRegisterCommand, ctx context.Context) error {
+	userName, err := user.NewUserName(command.Name)
+	if err != nil {
+		return nil
+	}
+	user, err := uas.userFactory.Create(*userName)
+
+	isExists, err := uas.userService.Exists(user)
+	if err != nil {
+		return err
+	}
+	if isExists {
+		return fmt.Errorf("user of %s is already exists.", command.Name)
+	}
+	
+	// user の登録は重複した名前が存在してはいけないというルールがあった場合、トランザクションレベルで排他制御も必要
+	err = uas.transaction.DoInTx(ctx, func(ctx context.Context) error {
+		if err = uas.userRepository.Save(user, ctx); err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	domain_user "github.com/tokatu4561/go-ddd-sample/domain/model/user"
+	domain_user "github.com/tokatu4561/go-ddd-demo/domain/model/user"
 )
 
 
@@ -65,20 +65,7 @@ func (err *FindByUserNameQueryError) Error() string {
 }
 
 func (ur *UserRepository) Save(user *domain_user.User) (err error) {
-	tx, err := ur.db.Begin()
-	if err != nil {
-		return
-	}
-	defer func() {
-		switch err {
-		case nil:
-			err = tx.Commit()
-		default:
-			tx.Rollback()
-		}
-	}()
-
-	_, err = tx.Exec("INSERT INTO users(id, name) VALUES ($1, $2)", user.Id().Id, user.Name().Value)
+	_, err = ur.db.Exec("INSERT INTO users(id, name) VALUES ($1, $2)", user.Id().Id, user.Name().Value)
 	if err != nil {
 		return &SaveQueryRowError{UserName: *user.Name(), Message: fmt.Sprintf("userrepository.Save err: %s", err), Err: err}
 	}
