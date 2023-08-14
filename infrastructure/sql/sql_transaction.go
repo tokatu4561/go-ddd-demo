@@ -8,7 +8,7 @@ import (
 	"github.com/tokatu4561/go-ddd-demo/infrastructure/transaction"
 )
 
-var txKey = struct{}{}
+var TxKey = struct{}{}
 
 type tx struct {
     db *sqlx.DB
@@ -24,7 +24,7 @@ func (t *tx) DoInTx(ctx context.Context, f func(ctx context.Context) error) (err
         return err
     }
 
-    ctx = context.WithValue(ctx, &txKey, tx)
+    ctx = context.WithValue(ctx, &TxKey, tx)
 
     err = f(ctx)
     if err != nil {

@@ -1,10 +1,12 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	domain_user "github.com/tokatu4561/go-ddd-demo/domain/model/user"
+	sql_transaction "github.com/tokatu4561/go-ddd-demo/infrastructure/sql"
 )
 
 
@@ -64,7 +66,18 @@ func (err *FindByUserNameQueryError) Error() string {
 	return err.Message
 }
 
-func (ur *UserRepository) Save(user *domain_user.User) (err error) {
+func (ur *UserRepository) Save(user *domain_user.User, ctx context.Context) (err error) {
+	// context からトランザクションオブジェクトを取得する
+	tx, ok := ctx.Value(sql_transaction.TxKey).(*sql.Tx)
+	if ok {
+		// トランザクションがある場合はトランザクション内で処理を行う
+		_, err = tx.Exec("INSERT INTO users(id, name) VALUES ($1, $2)", user.Id().Id, user.Name().Value)
+		if err != nil {
+			return &SaveQueryRowError{UserName: *user.Name(), Message: fmt.Sprintf("userrepository.Save err: %s", err), Err: err}
+		}
+		return nil
+	}
+
 	_, err = ur.db.Exec("INSERT INTO users(id, name) VALUES ($1, $2)", user.Id().Id, user.Name().Value)
 	if err != nil {
 		return &SaveQueryRowError{UserName: *user.Name(), Message: fmt.Sprintf("userrepository.Save err: %s", err), Err: err}
